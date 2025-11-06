@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Button & LCD Display Visualizer</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #fff;
+        padding: 20px;
+        color: #111;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .section {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border: 1px solid #eee;
+      }
+      h2 {
+        color: #111;
+        margin-bottom: 25px;
+        font-size: 1.8em;
+        border-bottom: 3px solid #eee;
+        padding-bottom: 10px;
+      }
+
+      /* Button Logic */
+      .button-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .button-card {
+        border: 3px solid #667eea;
+        border-radius: 12px;
+        padding: 20px;
+        background: #fff;
+      }
+      .button-header {
+        background: #667eea;
+        color: white;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.2em;
+      }
+      .button-pin {
+        background: #34495e;
+        color: #ecf0f1;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+        display: inline-block;
+        margin-left: 8px;
+      }
+      .action-item {
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+      .action-label {
+        font-weight: bold;
+        color: #667eea;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .action-value {
+        color: #2c3e50;
+      }
+      .no-action {
+        color: #95a5a6;
+        font-style: italic;
+      }
+
+      /* LCD Display */
+      .lcd-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+      }
+      .lcd-card {
+        --lcd-bg: 26, 26, 26;
+        --lcd-fg: #f8f8f8;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #ddd;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .lcd-header {
+        background: #fff;
+        color: #111;
+        padding: 14px 16px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .lcd-tag {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: rgb(var(--lcd-bg));
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        flex: 0 0 14px;
+      }
+      .lcd-sub {
+        font-weight: 500;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      .lcd-screen {
+        background: rgb(var(--lcd-bg));
+        color: var(--lcd-fg);
+        padding: 20px;
+        font-family: "Courier New", monospace;
+        border-left: 0;
+        border-right: 0;
+        min-height: 90px;
+      }
+      .lcd-line {
+        padding: 5px 0;
+        margin: 5px 0;
+        font-size: 1.15em;
+        white-space: pre;
+      }
+
+      .lcd-info {
+        padding: 12px 16px;
+        background: #fff;
+        color: #111;
+        font-size: 0.95em;
+        border-top: 1px solid #eee;
+      }
+      .rgb-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .rgb-swatch {
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        background: rgb(var(--lcd-bg));
+        border: 1px solid rgba(0, 0, 0, 0.25);
+      }
+      .rgb-value {
+        font-family: "Courier New", monospace;
+        background: #f3f3f3;
+        color: #111;
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 1px solid #eee;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .color-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="section">
+        <h2>1. Button Logic & Press Mapping</h2>
+        <div class="button-grid">
+          <div class="button-card">
+            <div class="button-header">
+              Button 1 <span class="button-pin">GPIO 22</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Quick Tap):</span
+              ><span class="action-value">Value + (Mode, Time, Sets)</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Hold 2s):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">During Session (Tap):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+          </div>
+          <div class="button-card">
+            <div class="button-header">
+              Button 2 <span class="button-pin">GPIO 23</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Quick Tap):</span
+              ><span class="action-value"
+                >Next Screen &gt; (Press on last screen to Start)</span
+              >
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Hold 2s):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">During Session (Tap):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+          </div>
+          <div class="button-card">
+            <div class="button-header">
+              Button 3 <span class="button-pin">GPIO 24</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Quick Tap):</span
+              ><span class="action-value">Value - (Mode, Time, Sets)</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Hold 2s):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">During Session (Tap):</span
+              ><span class="action-value no-action">(No Action)</span>
+            </div>
+          </div>
+          <div class="button-card">
+            <div class="button-header">
+              Button 4 <span class="button-pin">GPIO 25</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Quick Tap):</span
+              ><span class="action-value">&lt; Previous Screen</span>
+            </div>
+            <div class="action-item">
+              <span class="action-label">In Menu (Hold 2s):</span
+              ><span
+                class="action-value"
+                style="color: #e74c3c; font-weight: bold"
+                >QUIT PROGRAM (Acts like Ctrl+C)</span
+              >
+            </div>
+            <div class="action-item">
+              <span class="action-label">During Session (Tap):</span
+              ><span
+                class="action-value"
+                style="color: #e67e22; font-weight: bold"
+                >STOP SESSION (Returns to menu)</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. LCD Display & Color-Chip Mapping</h2>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(0, 255, 0)"></div>
+            <span>Green - Move/Exercise</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(0, 100, 255)"></div>
+            <span>Blue - Stay/Rest</span>
+          </div>
+          <div class="legend-item">
+            <div
+              class="color-dot"
+              style="background: rgb(255, 255, 255); border-color: #999"
+            ></div>
+            <span>White - Settings</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(0, 255, 255)"></div>
+            <span>Cyan - Ready</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(255, 165, 0)"></div>
+            <span>Orange - Paused</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(255, 0, 0)"></div>
+            <span>Red - Stopped</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(255, 0, 255)"></div>
+            <span>Magenta - Complete</span>
+          </div>
+          <div class="legend-item">
+            <div class="color-dot" style="background: rgb(128, 128, 128)"></div>
+            <span>Gray - Quit</span>
+          </div>
+        </div>
+
+        <div class="lcd-grid">
+          <div class="lcd-card" style="--lcd-bg: 0, 255, 0; --lcd-fg: #000">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Menu: Mode 1</span>
+              <span class="lcd-sub">/ Move Detection</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Mode 1</div>
+              <div class="lcd-line">Move Detection</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(0, 255, 0)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Shows when setting the workout mode. Detects movement.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 0, 100, 255; --lcd-fg: #fff">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Menu: Mode 2</span>
+              <span class="lcd-sub">/ Stay Detection</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Mode 2</div>
+              <div class="lcd-line">Stay Detection</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(0, 100, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Shows when setting the workout mode. Detects stillness.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 255, 255; --lcd-fg: #333">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Menu: Exercise</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Exercise Time</div>
+              <div class="lcd-line">30s</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 255, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Shows when setting the exercise duration.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 255, 255; --lcd-fg: #333">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Menu: Rest</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Rest Time</div>
+              <div class="lcd-line">10s</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 255, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Shows when setting the rest duration.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 0, 255, 255; --lcd-fg: #000">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Menu: Ready/Summary</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">M:1 Ex:30 R:10</div>
+              <div class="lcd-line">Sets:3 (Press&gt;)</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(0, 255, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Final confirmation screen. Pressing 'Next' (B2) starts the
+                timer.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 0, 255, 0; --lcd-fg: #000">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Running: Exercise</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">M1 Set 1/3 MOVE</div>
+              <div class="lcd-line">[####...] 25s</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(0, 255, 0)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Main workout screen. Shows live 'MOVE'/'STAY' status.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 0, 150, 255; --lcd-fg: #fff">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Running: Rest</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Rest 1/3</div>
+              <div class="lcd-line">[####...] 8s</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(0, 150, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Rest screen. Counts down the break time between sets.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 165, 0; --lcd-fg: #000">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Paused / Mode 1</span>
+              <span class="lcd-sub">/ No Motion</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">PAUSED</div>
+              <div class="lcd-line">No Motion!</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 165, 0)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Appears in Mode 1 (Move) if you stay still for 5s.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 165, 0; --lcd-fg: #000">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Paused / Mode 2</span>
+              <span class="lcd-sub">/ Motion Detected</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">PAUSED</div>
+              <div class="lcd-line">Motion Detect!</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 165, 0)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Appears in Mode 2 (Stay) if you move for 5s.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 0, 0; --lcd-fg: #fff">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Stopped (Button 4)</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Stopped</div>
+              <div class="lcd-line">Returning...</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 0, 0)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Appears if you tap Button 4 during any session. Returns to menu.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 255, 0, 255; --lcd-fg: #fff">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Session Complete</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Complete!</div>
+              <div class="lcd-line">Press any btn</div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(255, 0, 255)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Appears after the last set. Waits for a button press.
+              </p>
+            </div>
+          </div>
+
+          <div class="lcd-card" style="--lcd-bg: 128, 128, 128; --lcd-fg: #fff">
+            <div class="lcd-header">
+              <span class="lcd-tag"></span> <span>Program Quit</span>
+            </div>
+            <div class="lcd-screen">
+              <div class="lcd-line">Goodbye!</div>
+              <div class="lcd-line"></div>
+            </div>
+            <div class="lcd-info">
+              <div class="rgb-row">
+                <span class="rgb-swatch"></span><strong> RGB:</strong>
+                <span class="rgb-value">(128, 128, 128)</span>
+              </div>
+              <p style="margin-top: 8px; color: #444">
+                Appears if you hold Button 4 for 2 seconds. Program stops.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
